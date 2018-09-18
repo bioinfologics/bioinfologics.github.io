@@ -27,16 +27,20 @@
 
 <div class="article-meta">
 <h1><span class="title">k-mer counting, part I: Introduction</span></h1>
-<h2 class="author">Bernardo J. Clavijo</h2>
-<h2 class="date">2018/09/17</h2>
+<h3 class="author">Bernardo J. Clavijo</h3>
+<h3 class="date">2018/09/17</h3>
 </div>
 
 <main>
 
 
-<p>For the last 5 years, I have been advocating the analysis of <em>k-mer</em> spectra (in short, the frequencies at which different <em>k-mers</em> appear on different datasets) to evaluate genome assemblies. I have been using <em>k-mers</em> for many other analyses too, as most people doing Bioinformatics. And I also train others to perform <em>k-mer</em> analyses and have a long overdue debt to them to write down a more coherent version of the training. So here it goes, with the hope that it gets more people introduced to this simple and straightforward way to analyse sequence data.</p>
+<p><strong>Motivation</strong></p>
 
-<p>This will be the first of a (yet undetermined) number of posts about k-mer counting on sequences, reads, assemblies, and more. They will be part conceptual, part practical. I will show practical bits using <a href="https://github.com/TGAC/KAT">KAT</a>, the k-mer analysis toolkit. Among other things, <a href="https://academic.oup.com/bioinformatics/article/33/4/574/2664339">KAT introduced the spectra comparisson as a way to assess genome assemblies vs WGS reads</a>, and we use it for all kinds of tricks.</p>
+<p>For the last 5 years, I have been advocating the analysis of <em>k-mer</em> spectra (in short, the frequencies at which different <em>k-mers</em> appear on different datasets) to evaluate genome assemblies. I have been using <em>k-mers</em> for many other analyses too, as most people doing Bioinformatics. And I also train others to perform <em>k-mer</em> analyses and have a long overdue debt to them to write down a more coherent version of the training. So here it goes, with the hope that it gets more people introduced to this simple and straightforward way to analyse sequence data. It is just counting, and everyone can count.
+<center>
+<img src="/images/K001-keep_calm.png" alt="keep calm and count k-mers" />
+</center>
+This will be the first of a (yet undetermined) number of posts about k-mer counting on sequences, reads, assemblies, and more. They will be part conceptual, part practical. I will show practical bits using <a href="https://github.com/TGAC/KAT">KAT</a>, the k-mer analysis toolkit. Among other things, <a href="https://academic.oup.com/bioinformatics/article/33/4/574/2664339">KAT introduced the spectra comparison as a way to assess genome assemblies vs WGS reads</a>, and we use it for all kinds of tricks.</p>
 
 <p><br/><br/></p>
 
@@ -44,7 +48,9 @@
 
 <h1 id="k-mers-from-a-sequence"><em>k-mers</em> from a sequence</h1>
 
-<p><a href="https://en.wikipedia.org/wiki/k-mer">What is a <em>k-mer</em> anyway?</a> It is a sequence of <em>k</em> characters in a string. So, by way of example, the sequence <code>ATCGATCAC</code> contains the following <em>3-mers</em>:</p>
+<p><a href="https://en.wikipedia.org/wiki/k-mer">What is a <em>k-mer</em> anyway?</a> A <em>k-mer</em> is just a sequence of <em>k</em> characters in a string. Now, it is important to remember that to get <em>all k-mers</em> from a sequence you need to get the first <em>k</em> characters, then move just a single character for the start of the next <em>k-mer</em> and so on. Effectively, this will create sequences that overlap in <code>k-1</code> positions.</p>
+
+<p>So, by way of example, the sequence <code>ATCGATCAC</code> contains the following <em>3-mers</em> (<em>k-mer</em> of size 3):</p>
 
 <pre><code>Sequence: ATCGATCAC
 3-mer #0: ATC
@@ -56,7 +62,7 @@
 3-mer #6:       CAC
 </code></pre>
 
-<p>Or, in a nice looking table:</p>
+<p>Or, in a nice looking table which we&rsquo;ll expand later:</p>
 
 <table>
 <thead>
@@ -97,49 +103,25 @@
 4-mer #5:      TCAC
 </code></pre>
 
-<p>Or, in a nice looking table:</p>
+<p>So far, so good, so easy. Notice how there is 1 fewer <em>4-mer</em> than <em>3-mers</em> in the same sequence. Any sequence of length <code>L</code> will contain <code>L - k + 1</code>   <em>k-mers</em>, which has implications for <em>k-mer</em> analyses when the <em>k</em> is close to the lenght of the sequence. When <em>k &lt;&lt; L</em>, as it tipycally happens when we chop the millions or billions of bp of a genome into <em>k-mers</em> with <em>k</em> in the low hundreds of even tens, you can pretend there&rsquo;s a <em>k-mer</em> at every position in the genome and forget about it.</p>
 
-<table>
-<thead>
-<tr>
-<th align="center">Offset</th>
-<th align="center">0</th>
-<th align="center">1</th>
-<th align="center">2</th>
-<th align="center">3</th>
-<th align="center">4</th>
-<th align="center">5</th>
-</tr>
-</thead>
-
-<tbody>
-<tr>
-<td align="center"><strong>4-mer</strong></td>
-<td align="center">ATCG</td>
-<td align="center">TCGA</td>
-<td align="center">CGAT</td>
-<td align="center">GATC</td>
-<td align="center">ATCA</td>
-<td align="center">TCAC</td>
-</tr>
-</tbody>
-</table>
-
-<p>So far, so good, so easy. Any sequence of lenght <code>L</code> will contain <code>L - k + 1</code>   <em>k-mers</em> and you can easily imagine the many analyses that can be performed with these (if not, don&rsquo;t worry, I will show some along the way).</p>
+<p>I hope you can easily imagine the many analyses that can be performed with <em>k-mers</em>, but if not, don&rsquo;t worry, I will show some along the way).</p>
 
 <h3 id="did-you-know-images-did-you-know-png-why-are-k-mers-so-popular"><img src="/images/did_you_know.png" alt="did_you_know" /> <strong>Why are <em>k-mers</em> so popular ?</strong></h3>
 
 <p>Decomposing a sequence into it&rsquo;s <em>k-mers</em> for analysis allows this set of fixed-size chunks to be analysed rather than the sequence, and this can be more efficient. K-mers are very useful in sequence matching (string matching with n-grams has a rich history), and set operations are faster, easier, and there is a lot of ready-available algorithms and techniques to work with them. A simple example: to check if a sequence <em>S</em> comes from organism <em>A</em> or from organism <em>B</em>, assuming the genomes of <em>A</em> and <em>B</em> are known and sufficiently different, we can check if S contains more <em>k-mers</em> present in <em>A</em> or in <em>B</em>. Yes, there are many tools that do just that.</p>
 
+<p>Basically, <em>k-mers</em> make bioinformatics counting and comparing whether things are there or not.</p>
+
 <h2 id="reverse-complement-and-canonical-k-mers">Reverse complement and canonical <em>k-mers</em></h2>
 
 <p><small><em>*Note: for this section I assume double-strandness is the typical use case. This is a fair assumption, but there will be exceptions</em></small></p>
 
-<p><em>K-mers</em> or <em><a href="https://en.wikipedia.org/wiki/n-gram">n-grams</a></em> have been around a long time, but a specific complication comes with bioinformatics: <a href="https://en.wikipedia.org/wiki/DNA#Base_pairing">DNA is normally double stranded, with bases paired on the oposite strands</a> and we normally read (or sequence) on any of the two strands. Still, we want to consider every location of the genome once no matter which strand we happened to have landed in.</p>
+<p><a href="https://en.wikipedia.org/wiki/DNA#Base_pairing">DNA is normally double stranded, with bases paired on the opposite strands</a> and we normally read (or sequence) on any of the two strands. Still, we want to consider every location of the genome once no matter which strand we happened to have landed in.</p>
 
-<p>In short: if we read the sequence <code>ATCGAC</code> that is an observation for that sequence <em>and it&rsquo;s reverse complement</em> <code>GTCGAT</code> to exist in the genome. One appears when reading the genome in one direction and the other on its oposite, we could have sequenced any of them. So for the sake of completeness we should perform all analyses by considering this sequence <code>ATCGAC/GTCGAT</code>.</p>
+<p>In short: if we read the sequence <code>ATCGAC</code> that is an observation for that sequence <em>and it&rsquo;s reverse complement</em> <code>GTCGAT</code> to exist in the genome. One appears when reading the genome in one direction and the other on its opposite, we could have sequenced any of them. So for the sake of completeness we should perform all analyses by considering this sequence <code>ATCGAC/GTCGAT</code>.</p>
 
-<p>Luckily, there is a way on <em>k-mer</em> analysis (or in sequence analysis in general) to be sure we always talk about the same sequence in the same way: we can only use the <em>canonical</em> sequence of a <em>k-mer</em> pair, this is the lexicographycally smaller of the two <em>reverse complementary</em> sequences. In other words, the one that comes before in alphabetical order.</p>
+<p>Luckily, there is a way on <em>k-mer</em> analysis (or in sequence analysis in general) to be sure we always talk about the same sequence in the same way: we can only use the <em>canonical</em> sequence of a <em>k-mer</em> pair, this is the lexicographically smaller of the two <em>reverse complementary</em> sequences. In other words, the one that comes before in alphabetical order.</p>
 
 <p>Most <em>k-mer</em> counting tools will either count in canonical <em>k-mers</em> or have an option to switch between canonical and non-canonical. Most of the times canonical counting will be the default. This means if <code>GTCGAT</code> appears it will be counted as <code>ATCGAC</code>. Most of the times this is exactly what we want.</p>
 
@@ -199,17 +181,17 @@
 
 <h3 id="did-you-know-images-did-you-know-png-why-do-many-tools-use-odd-values-for-k"><img src="/images/did_you_know.png" alt="did_you_know" /> Why do many tools use odd values for <em>k</em> ?</h3>
 
-<p>To write a <em>k-mer</em> based tool, we need to account for the relationship within a <em>k-mer</em> and its <em>reverse complement</em> because we don&rsquo;t know which direction we are reading from. In many tools this relationship is used to detect sequence orientation: if sequence A has the same <em>k-mers</em> as sequence B, in oposite order and in <em>reverse complement</em>, B is in oposite orientation than A. But when using even values of k, a <em>k-mer</em> can be its own <em>reverse complement</em>, which makes it difficult to handle the <em>reverse complements</em>, and a lot less clear about orientations. This happens when the first half of the sequence is the <em>reverse complement</em> of the second half, as in   <code>TCGCGA</code>. A <em>k-mer</em> of odd <em>k</em> (an <em>odd-mer</em>, if you will) can never be its own reverse complement, because the base in the middle of its sequence should be its own complement. Hence, many tools stick to odd values for <em>k</em>.</p>
+<p>To write a <em>k-mer</em> based tool, we need to account for the relationship within a <em>k-mer</em> and its <em>reverse complement</em> because we don&rsquo;t know which direction we are reading from. In many tools this relationship is used to detect sequence orientation: if sequence A has the same <em>k-mers</em> as sequence B, in opposite order and in <em>reverse complement</em>, B is in opposite orientation than A. But when using even values of k, a <em>k-mer</em> can be its own <em>reverse complement</em>, which makes it difficult to handle the <em>reverse complements</em>, and a lot less clear about orientations. This happens when the first half of the sequence is the <em>reverse complement</em> of the second half, as in   <code>TCGCGA</code>. A <em>k-mer</em> of odd <em>k</em> (an <em>odd-mer</em>, if you will) can never be its own reverse complement, because the base in the middle of its sequence should be its own complement. Hence, many tools stick to odd values for <em>k</em>.</p>
 
 <h2 id="distinct-unique-and-total-k-mers">Distinct, unique, and total <em>k-mers</em></h2>
 
-<p>People that counts <em>k-mers</em> talks a lot about unique <em>k-mers</em>, and there is also the <em>total</em> and the <em>distinct</em> counts to keep in mind. All of these can be also done in <em>canonical</em> or <em>non-canonical</em> ways. Sounds confusing? It is actually not.</p>
+<p>People that counts <em>k-mers</em> talk about <em>unique</em> <em>k-mers</em>, and there is also the <em>total</em> and the <em>distinct</em> counts to keep in mind. All of these can be also done in <em>canonical</em> or <em>non-canonical</em> ways. Sounds confusing? It is actually not.</p>
 
-<p><em>Total k-mers</em> are the simplest of all, as we have shown with the example of <code>ATCGATCAC</code> the ammount of <em>k-mers</em> from a sequence varies with <em>k</em>, and that is basically it. <code>ATCGATCAC</code> has 7 <em>total 3-mers</em> and 6 <em>total 4-mers</em>.</p>
+<p><em>Total k-mers</em> are the simplest of all, as we have shown with the example of <code>ATCGATCAC</code> the amount of <em>k-mers</em> from a sequence varies with <em>k</em>, and that is basically it. <code>ATCGATCAC</code> has 7 <em>total 3-mers</em> and 6 <em>total 4-mers</em>.</p>
 
 <p><em>Distinct k-mers</em> are counted only once, even if they appear more times, while <em>Unique k-mers</em> are those that appear only once. These two categories of <em>k-mers</em> are greatly affected by counting <em>canonically</em> or <em>not-canonically</em>, because <em>reverse complements</em> are being considered the same <em>k-mer</em>.</p>
 
-<p>This is the <em>3-mer</em> composition for <code>ATCGATCAC</code> again, in <em>non-canonical</em> form, grouping its <em>k-mer</em> occurences:</p>
+<p>This is the <em>3-mer</em> composition for <code>ATCGATCAC</code> again, in <em>non-canonical</em> form, grouping its <em>k-mer</em> occurrences:</p>
 
 <table>
 <thead>
@@ -278,7 +260,7 @@
 <table>
 <thead>
 <tr>
-<th align="center"><em>k-mer</em></th>
+<th align="center"><em>Canonical k-mer</em></th>
 <th align="center">Total count</th>
 <th align="center">Distinct count</th>
 <th align="center">Unique count</th>
@@ -325,9 +307,9 @@
 
 <p>As expected, in this <em>canonical</em> counting version TCG has been grouped into CGA, and GAT has been grouped into ATC. So the count has fewer <em>distinct k-mers</em>, and fewer <em>unique k-mers</em>. Canonical counting will always yield fewer (or at most the same), <em>distinct k-mers</em> and <em>unique k-mers</em>.</p>
 
-<h3 id="did-you-know-images-did-you-know-png-what-makes-unique-k-mers-so-special"><img src="/images/did_you_know.png" alt="did_you_know" /> <strong>What makes unique <em>k-mers</em> so special ?</strong></h3>
+<h3 id="did-you-know-images-did-you-know-png-what-makes-unique-k-mers-so-special"><img src="/images/did_you_know.png" alt="did_you_know" /> <strong>What makes <em>unique k-mers</em> so special ?</strong></h3>
 
-<p>Unique k-mers make analyses simple. For instance, if a k-mer appears only once in a genome, it can be used to check if a particular region of the genome is present or not in a sample, or to check for variation, or as anchor to aligne other genome&rsquo;s content, or reads. Unique content within a genome is a good thing, enabling independent analysis of each part of the genome. Genes being usually made up of quite different content than the &ldquo;repeats&rdquo; of a genome is the reason why it is in general easier to assemble the genic part of a genome.</p>
+<p>Unique k-mers make analyses simple. For instance, if a k-mer appears only once in a genome, it can be used to check if a particular region of the genome is present or not in a sample, or to check for variation, or as anchor to align other genome&rsquo;s content, or reads. Unique content within a genome is a good thing, enabling independent analysis of each part of the genome. Genes being usually made up of quite different content than the &ldquo;repeats&rdquo; of a genome is the reason why it is in general easier to assemble the genic part of a genome.</p>
 
 <p>Sadly, repetitive content as a concept is poorly defined between biological and computational terms. While in biological terms a loose definition of repeat could be &ldquo;the stuff between the genes, which is assumed to be similar and low-complexity&rdquo;, in computational terms it always means &ldquo;a portion of sequence that appears exactly the same more than one time&rdquo;. This is why sometimes gene families (groups of very similar genes) are very hard to analyse as they appear multiple times in the genome. At the same time, this dissonance, also gives some light at the end of the tunnel in unexpected scenarios: a so-called biological repeat may turn out to have a few unique k-mers every time it appears, which in turn may make it a relatively simple region to analyse with the right choice of sequencing technologies and algorithms.</p>
 
@@ -378,13 +360,13 @@ $ kat hist -o phiX_twice.hist phiX_twice.fasta
 ...
 </code></pre>
 
-<p>Now all 5360 27-mers appear twice. With the basics done, it is time to get into the most popular question on <em>k-mer</em> based analysis.</p>
+<p>Now all <code>5360</code> 27-mers appear twice. With the basics done, it is time to get into the most popular question on <em>k-mer</em> based analysis.</p>
 
 <h3 id="choosing-k-the-size-of-the-universe-and-specificity-vs-sensitivity">Choosing <em>k</em>: the size of the universe and specificity vs. sensitivity</h3>
 
-<p>Choosing <em>k</em> is not a trivial topic on <em>k-mer</em> analysis. Using a <em>k</em> that is too small will result on many unrelated sequences being composed of the same <em>k-mers</em>, in a textbook case of specificity loss because there being very few possible <em>k-mers</em> of that size. In the extreme of the small k, <code>k=1</code> only distinguishes two <em>canonical k-mers</em>: <code>A</code> and <code>C</code>. 1-mer analysis is incredibly popular in biology, but it is best known by the name of <em>GC content analysis</em>. On the other hand, using extremely large <em>k</em> values would sacrifice many of the benefits of <em>k-mer</em> analyses in the first place, such as decomposing the larger problem into small easy to solve exact problems. This leads to problems in inexact matching which I will describe in future posts.</p>
+<p>Choosing <em>k</em> is not a trivial topic on <em>k-mer</em> analysis. Using a <em>k</em> that is too small will result in many unrelated sequences being composed of the same <em>k-mers</em>, in a textbook case of specificity loss because there being very few possible <em>k-mers</em> of that size. In the extreme of the small k, <code>k=1</code> only distinguishes two <em>canonical k-mers</em>: <code>A</code> and <code>C</code>. 1-mer analysis is incredibly popular in biology, but it is best known by the name of <em>GC content analysis</em>. On the other hand, using extremely large <em>k</em> values would sacrifice many of the benefits and sensitivity of <em>k-mer</em> analyses in the first place, such as decomposing the larger problem into small easy to solve exact problems that can produce an aggregated solution. This leads to problems in inexact matching which I will describe in future posts.</p>
 
-<p>Knowing how many different <em>k-mers</em> can be constructed at a certain <em>k</em> is a good starting point to make an informed choice of <em>k</em>. Since every of the <em>k</em> nucleotides in a <em>k-mer</em> can take any of the <code>A</code>, <code>C</code>, <code>G</code> or <code>T</code> values, the possible combinations of <em>k</em> positions are computed as <code>4^k</code>. When counting <em>canonical k-mers</em> not every value will be considered, but only those that are canonical. For odd values of <em>k</em> that is half of the <em>k-mers</em>, so the size of the universe becomes <code>(4^k)/2</code>. For even values, due to some <em>k-mers</em> being their own <em>reverse complement</em>, the size is slightly higher at <code>(4^k + 4^(k/2) ) / 2</code>. Again, sticking to odd <em>k</em> values makes life simpler.</p>
+<p>Knowing how many different <em>k-mers</em> can be constructed at a certain <em>k</em> is a good starting point to make an informed choice of <em>k</em>, we call the all posible <em>k-mers</em> the universe, so this is our <em>size of the universe</em> for <em>k</em> . Since every of the <em>k</em> nucleotides in a <em>k-mer</em> can take any of the <code>A</code>, <code>C</code>, <code>G</code> or <code>T</code> values, the possible combinations of <em>k</em> positions are computed as <code>4^k</code>. When counting <em>canonical k-mers</em> not every value will be considered, but only those that are canonical. For odd values of <em>k</em> that is half of the <em>k-mers</em>, so the size of the universe becomes <code>(4^k)/2</code>. For even values, due to some <em>k-mers</em> being their own <em>reverse complement</em>, the size is slightly higher at <code>(4^k + 4^(k/2) ) / 2</code>. Again, sticking to odd <em>k</em> values makes life simpler, but don&rsquo;t worry about the formulae too much.</p>
 
 <p>Let&rsquo;s check now what happens if we change that <em>k</em> value between two carefully chosen values of 9 and 8 in the Phi-X genome (we will discuss how these were chosen soon). For historical reasons (due the to options from <a href="https://github.com/gmarcais/Jellyfish">Jellyfish</a>, on which KAT is based), KAT uses the <code>-m</code> parameter to set <em>k</em>. If <em>k</em> is small enough, the <em>k-mers</em> will appear more than once in the genome, even for this very simple genome.</p>
 
@@ -582,7 +564,7 @@ done
 
 <p><img src="/images/K001-phix_k_response.png" alt="phix_k_response" /></p>
 
-<p>From these results, it is clear there is not a lot to look at for <code>k&lt;5</code>, these universes are so small they get completely saturated with the same <em>k-mers</em> over and over again. While frequency analyses aking to <em>GC content</em> and <em>codon usage</em> can be done there, it is slightly tangential to our topic today.</p>
+<p>From these results, it is clear there is not a lot to look at for <code>k&lt;5</code> (see how the unique <em>k-mers</em> are 0), these universes are so small they get completely saturated with the same <em>k-mers</em> over and over again. While frequency analyses like <em>GC content</em> and <em>codon usage</em> can be done there, it is slightly tangential to our topic today.</p>
 
 <p>In the range <code>5 &lt;= k &lt;= 10</code>, there is a progressive growth on unique and distinct <em>k-mers</em>. Here, the <em>k</em> value makes a difference and will affect the results as the shown in the cherry-picked <em>9-mer</em> and <em>8-mer</em> cases earlier.</p>
 
@@ -602,6 +584,8 @@ for k in {1..31}; do
 done
 </code></pre>
 
+<p><small>Note: </small></p>
+
 <p>And the corresponding plot looks like this:</p>
 
 <p><img src="/images/K001-ecoli_k_response.png" alt="ecoli_k_response" /></p>
@@ -611,13 +595,13 @@ done
 <p><br/>
 <img src="/images/did_you_know.png" alt="did_you_know" /> <strong>Why do many tools use <em>k = 31</em> ?</strong></p>
 
-<p>31 is the largest odd value of <em>k</em> such that a <em>k-mer</em> can be translated into a 64-bit integer. Most computers nowadays can manipulate 64-bit integers very well and most programming languages will make it easy to work efficiently with 64-bit integers (yes, this has to do with computers using 64-bit architectures). With <em>31-mers</em> being specific enough that a large number of <em>31-mers</em> both in mammalian-sized genomes (and some more complex genomes too) and in bacterial genome databases, bioinformatics is sold.</p>
+<p>31 is the largest odd value of <em>k</em> such that a <em>k-mer</em> can be translated into a 64-bit integer. Most computers nowadays can manipulate 64-bit integers very well and most programming languages will make it easy to work efficiently with 64-bit integers (yes, this has to do with computers using 64-bit architectures). With <em>31-mers</em> being specific enough that a large number of them are unique both in mammalian-sized genomes (and some more complex genomes too) and in bacterial genome databases, bioinformatics tools just stick to that.</p>
 
 <p><br/><br/></p>
 
 <hr />
 
-<p><strong>Comming soon&hellip;</strong></p>
+<p><strong>Coming soon&hellip;</strong></p>
 
 <p>In future posts we will go over <em>k-mer</em> counting in WGS reads and the read spectrum, onwards to spectra comparisons, and all kinds of k-mer intersection based analyses.</p>
 
@@ -628,6 +612,8 @@ done
 <h3 id="version-history">Version History</h3>
 
 <p>2018-09-17: initial post.</p>
+
+<p>2018-09-18: corrected small typos and readability.</p>
 
 <p></small></p>
 
