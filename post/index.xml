@@ -18,7 +18,7 @@
       
       <guid>/post/2018/09/17/k-mer-counting-part-i-introduction/</guid>
       <description>Motivation
-For the last 5 years, I have been advocating the analysis of k-mer spectra (in short, the frequencies at which different k-mers appear on different datasets) to evaluate genome assemblies. I have been using k-mers for many other analyses too, as do most people doing Bioinformatics. And I also train others to perform k-mer analyses and have a long overdue debt to them to write down a more coherent version of the training.</description>
+For the last 5 years, I have been advocating the analysis of k-mer spectra (in short, the frequencies at which different k-mers appear on different datasets) to evaluate genome assemblies. I have been using k-mers for many other analyses too, as do most people doing Bioinformatics. I also train others to perform k-mer analyses and have a long overdue debt to them to write down a more coherent version of the training.</description>
     </item>
     
   </channel>
